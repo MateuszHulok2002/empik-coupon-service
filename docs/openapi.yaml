@@ -1,0 +1,275 @@
+openapi: 3.1.0
+info:
+  title: Coupon Service API
+  version: 1.0.0
+  description: REST API for creating and redeeming country-restricted coupons.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/coupons:
+    post:
+      operationId: createCoupon
+      summary: Create a coupon
+      tags: [Coupons]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCouponRequest'
+            examples:
+              springCampaign:
+                value:
+                  code: wiosna
+                  maxUses: 10
+                  country: PL
+      responses:
+        '201':
+          description: Coupon created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: A coupon with the canonicalized code already exists
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+              examples:
+                duplicateCode:
+                  value:
+                    type: urn:problem:coupon-service:coupon-already-exists
+                    title: Coupon conflict
+                    status: 409
+                    detail: Coupon with code 'WIOSNA' already exists.
+                    instance: /api/v1/coupons
+                    errorCode: COUPON_ALREADY_EXISTS
+                    timestamp: '2026-07-24T08:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /api/v1/coupon-redemptions:
+    post:
+      operationId: redeemCoupon
+      summary: Register a coupon redemption
+      description: The client IP is obtained from the servlet container, not from the request body.
+      tags: [Coupon redemptions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RedeemCouponRequest'
+            examples:
+              redemption:
+                value:
+                  couponCode: WIOSNA
+                  userId: customer-123
+      responses:
+        '201':
+          description: Coupon redeemed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RedemptionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Coupon country differs from the country resolved for the client IP
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Coupon does not exist
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Coupon is exhausted or has already been redeemed by this user
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          description: IP geolocation is temporarily unavailable
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Suggested retry delay in seconds
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  responses:
+    BadRequest:
+      description: Request validation failed or JSON is malformed
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotAcceptable:
+      description: Requested response media type is not supported
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    UnsupportedMediaType:
+      description: Request Content-Type is not supported
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalServerError:
+      description: Unexpected server-side failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    CreateCouponRequest:
+      type: object
+      additionalProperties: false
+      required: [code, maxUses, country]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Coupon code; surrounding ASCII whitespace is trimmed and comparison is case-insensitive.
+          examples: [WIOSNA]
+        maxUses:
+          type: integer
+          format: int32
+          minimum: 1
+          examples: [10]
+        country:
+          type: string
+          pattern: '^[A-Za-z]{2}$'
+          description: ISO 3166-1 alpha-2 country code.
+          examples: [PL]
+    RedeemCouponRequest:
+      type: object
+      additionalProperties: false
+      required: [couponCode, userId]
+      properties:
+        couponCode:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Coupon code; comparison is case-insensitive.
+          examples: [WIOSNA]
+        userId:
+          type: string
+          minLength: 1
+          maxLength: 128
+          description: Opaque, case-sensitive user identifier.
+          examples: [customer-123]
+    CouponResponse:
+      type: object
+      additionalProperties: false
+      required: [id, code, createdAt, maxUses, currentUses, remainingUses, country]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        maxUses:
+          type: integer
+          format: int32
+        currentUses:
+          type: integer
+          format: int32
+        remainingUses:
+          type: integer
+          format: int32
+        country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+    RedemptionResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - redemptionId
+        - couponCode
+        - userId
+        - redeemedAt
+        - currentUses
+        - remainingUses
+        - country
+      properties:
+        redemptionId:
+          type: string
+          format: uuid
+        couponCode:
+          type: string
+        userId:
+          type: string
+        redeemedAt:
+          type: string
+          format: date-time
+        currentUses:
+          type: integer
+          format: int32
+        remainingUses:
+          type: integer
+          format: int32
+        country:
+          type: string
+          pattern: '^[A-Z]{2}$'
+    Violation:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    Problem:
+      type: object
+      additionalProperties: false
+      description: RFC 9457-style error response with service-specific extensions.
+      required: [type, title, status, detail, instance, errorCode, timestamp]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        errorCode:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Violation'

@@ -1,0 +1,4 @@
+app:
+  geo:
+    mode: fixed
+    fixed-country: PL

@@ -1,0 +1,56 @@
+@host = http://localhost:8080
+
+### Health
+GET {{host}}/actuator/health
+Accept: application/json
+
+### Create a Polish coupon
+POST {{host}}/api/v1/coupons
+Content-Type: application/json
+Accept: application/json
+
+{
+  "code": "wiosna",
+  "maxUses": 2,
+  "country": "PL"
+}
+
+### Redeem as the first user
+POST {{host}}/api/v1/coupon-redemptions
+Content-Type: application/json
+Accept: application/json
+
+{
+  "couponCode": "WIOSNA",
+  "userId": "customer-001"
+}
+
+### Redeem as the second user
+POST {{host}}/api/v1/coupon-redemptions
+Content-Type: application/json
+Accept: application/json
+
+{
+  "couponCode": "wiosna",
+  "userId": "customer-002"
+}
+
+### Duplicate redemption — expected 409 COUPON_ALREADY_REDEEMED
+POST {{host}}/api/v1/coupon-redemptions
+Content-Type: application/json
+Accept: application/json
+
+{
+  "couponCode": "WIOSNA",
+  "userId": "customer-001"
+}
+
+### New user after the limit — expected 409 COUPON_EXHAUSTED
+POST {{host}}/api/v1/coupon-redemptions
+Content-Type: application/json
+Accept: application/json
+
+{
+  "couponCode": "WIOSNA",
+  "userId": "customer-003"
+}

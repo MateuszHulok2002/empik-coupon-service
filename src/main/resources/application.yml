@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: coupon-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/coupons}
+    username: ${SPRING_DATASOURCE_USERNAME:coupon}
+    password: ${SPRING_DATASOURCE_PASSWORD:coupon}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:2}
+      connection-timeout: 3000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  jackson:
+    default-property-inclusion: non_null
+    deserialization:
+      fail-on-unknown-properties: true
+
+server:
+  shutdown: graceful
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:none}
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Coupon creation and redemption service
+
+app:
+  geo:
+    mode: ${APP_GEO_MODE:remote}
+    base-url: ${APP_GEO_BASE_URL:https://api.country.is}
+    connect-timeout: ${APP_GEO_CONNECT_TIMEOUT:1s}
+    read-timeout: ${APP_GEO_READ_TIMEOUT:2s}
+    cache-ttl: ${APP_GEO_CACHE_TTL:24h}
+    cache-maximum-size: ${APP_GEO_CACHE_MAXIMUM_SIZE:10000}
+    fixed-country: ${APP_GEO_FIXED_COUNTRY:PL}

@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:17.10-alpine
+    environment:
+      POSTGRES_DB: coupons
+      POSTGRES_USER: coupon
+      POSTGRES_PASSWORD: coupon
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coupon -d coupons"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - coupon-postgres-data:/var/lib/postgresql/data
+
+  coupon-service:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/coupons
+      SPRING_DATASOURCE_USERNAME: coupon
+      SPRING_DATASOURCE_PASSWORD: coupon
+      APP_GEO_MODE: fixed
+      APP_GEO_FIXED_COUNTRY: PL
+    ports:
+      - "8080:8080"
+
+volumes:
+  coupon-postgres-data:
