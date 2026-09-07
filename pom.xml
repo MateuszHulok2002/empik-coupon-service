@@ -23,7 +23,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <archunit.version>1.4.2</archunit.version>
         <jacoco.version>0.8.15</jacoco.version>
-        <surefire.version>3.5.6</surefire.version>
+        <surefire.version>3.6.0</surefire.version>
     </properties>
 
     <dependencies>
